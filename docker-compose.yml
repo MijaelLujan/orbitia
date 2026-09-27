@@ -1,0 +1,60 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: plataforma_oauth_db
+    environment:
+      POSTGRES_USER: plataforma
+      POSTGRES_PASSWORD: plataforma_pass
+      POSTGRES_DB: plataforma_oauth_dev
+    ports:
+      - "5434:5432"
+    volumes:
+      - plataforma_oauth_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U plataforma -d plataforma_oauth_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: plataforma_oauth_redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - plataforma_oauth_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: plataforma_oauth_app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://plataforma:plataforma_pass@postgres:5432/plataforma_oauth_dev
+      DIRECT_URL: postgresql://plataforma:plataforma_pass@postgres:5432/plataforma_oauth_dev
+      REDIS_URL: redis://redis:6379
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
+      LINKEDIN_CLIENT_ID: ${LINKEDIN_CLIENT_ID}
+      LINKEDIN_CLIENT_SECRET: ${LINKEDIN_CLIENT_SECRET}
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+    ports:
+      - "3000:3000"
+
+volumes:
+  plataforma_oauth_postgres_data:
+  plataforma_oauth_redis_data:

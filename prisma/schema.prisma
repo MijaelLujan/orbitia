@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Provider {
+  GOOGLE
+  GITHUB
+  LINKEDIN
+}
+
+enum ConnectionStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+}
+
+enum NotificationType {
+  MEETING_CREATED
+  MEETING_UPDATED
+  MEETING_CANCELLED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+
+  connections    Connection[]
+  meetings       Meeting[]
+  availabilities AvailabilityLink[]
+  notifications  Notification[]
+  auditLogs      AuditLog[]
+}
+
+// Ver shared/crypto.ts: accessToken y refreshToken siempre se guardan cifrados, nunca en texto plano.
+model Connection {
+  id           String            @id @default(uuid())
+  userId       String
+  provider     Provider
+  accessToken  String
+  refreshToken String?
+  expiresAt    DateTime
+  scope        String
+  status       ConnectionStatus  @default(ACTIVE)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, provider])
+}
+
+// Recurso de ejemplo completo: ver src/controllers/meeting/ y src/services/meeting/
+model Meeting {
+  id           String   @id @default(uuid())
+  userId       String
+  title        String
+  startsAt     DateTime
+  endsAt       DateTime
+  participants String[]
+  meetingUrl   String
+  notes        String?
+  deletedAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model AvailabilityLink {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  weekStart DateTime
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id        String            @id @default(uuid())
+  userId    String
+  type      NotificationType
+  payload   Json
+  read      Boolean           @default(false)
+  createdAt DateTime          @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  resource  String
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}

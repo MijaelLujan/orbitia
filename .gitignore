@@ -1,0 +1,20 @@
+# dependencias
+node_modules/
+
+# build de Next.js
+.next/
+out/
+
+# variables de entorno (nunca se sube el .env real, solo .env.example)
+.env
+.env.local
+.env.*.local
+
+# Prisma
+prisma/dev.db
+src/generated/
+
+# logs y sistema
+*.log
+.DS_Store
+Thumbs.db
